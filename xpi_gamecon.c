@@ -171,6 +171,10 @@ static void gc_timer(struct timer_list *t)
 
 	int byteindex;
 	long bitindex;
+	//데드존 설정
+	int nAX = 0, nAY = 0;
+	int dzone = 26;
+
 
 	gpio_func(gc_gpio_data,1);	//input
 
@@ -240,9 +244,14 @@ static void gc_timer(struct timer_list *t)
 		}
 
 		lastgood++;
+		
+		nAX = (int16_t)data[1];
+		nAY = (int16_t)data[2];
+		if ( nAX > (127 - dzone) && nAX < (127 + dzone) ) nAX = 127;
+		if ( nAY > (127 - dzone) && nAY < (127 + dzone) ) nAY = 127;
 
-		input_report_abs(dev, ABS_X, (int16_t)data[1]);		//X Axis
-		input_report_abs(dev, ABS_Y, (int16_t)data[2]);		//Y Axis
+		input_report_abs(dev, ABS_X, nAX);		//X Axis
+		input_report_abs(dev, ABS_Y, nAY);		//Y Axis
 
 		input_report_key(dev, gc_btn[0], !(data[3]&0x01));	//A
 		input_report_key(dev, gc_btn[1], !(data[3]&0x02));	//B
@@ -253,10 +262,14 @@ static void gc_timer(struct timer_list *t)
 		input_report_key(dev, gc_btn[6], data[3]&0x40);		//Select
 		input_report_key(dev, gc_btn[7], data[3]&0x80); 	//Start
 		input_report_key(dev, gc_btn[8], data[4]&0x40);		//Left Thumb
-		input_report_key(dev, gc_btn[9], data[4]&0x01);		//DPAD Up
-		input_report_key(dev, gc_btn[10], data[4]&0x02);	//DPAD Down
-		input_report_key(dev, gc_btn[11], data[4]&0x04);	//DPAD Left
-		input_report_key(dev, gc_btn[12], data[4]&0x08);	//DPAD Right
+		//input_report_key(dev, gc_btn[9], data[4]&0x01);		//DPAD Up
+		//input_report_key(dev, gc_btn[10], data[4]&0x02);	//DPAD Down
+		//input_report_key(dev, gc_btn[11], data[4]&0x04);	//DPAD Left
+		//input_report_key(dev, gc_btn[12], data[4]&0x08);	//DPAD Right
+
+		input_report_abs(dev, ABS_HAT0X, !(data[4]&0x04)-!(data[4]&0x08));	//HAT X
+		input_report_abs(dev, ABS_HAT0Y, !(data[4]&0x02)-!(data[4]&0x01));	//HAT Y
+
 		input_report_key(dev, gc_btn[13], data[4]&0x10);	//Left Shoulder
 		input_report_key(dev, gc_btn[14], data[4]&0x20);	//Right Shoulder
 
@@ -316,6 +329,8 @@ static int __init gc_setup_pad(struct gc *gc)
 
 	input_set_abs_params(input_dev, ABS_X, 0, 255, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y, 0, 255, 0, 0);
+	input_set_abs_params(input_dev, ABS_HAT0X, -1, 1, 0, 0);
+	input_set_abs_params(input_dev, ABS_HAT0Y, -1, 1, 0, 0);
 
 	err = input_register_device(input_dev);
 	if (err)
