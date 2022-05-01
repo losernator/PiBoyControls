@@ -21,6 +21,8 @@ static unsigned long lasterror=0;
 
 static uint8_t index;
 
+static uint8_t running=0;
+
 union {
 	struct {
 		int flags_val;
@@ -171,7 +173,7 @@ static void gc_timer(struct timer_list *t)
 
 	int byteindex;
 	long bitindex;
-	//데드존 설정
+	//deadzone set
 	int nAX = 0, nAY = 0;
 	int dzone = 26;
 
@@ -297,7 +299,8 @@ static void gc_timer(struct timer_list *t)
 
 	gpio_func(gc_gpio_data,1);	//input
 
-	mod_timer(&gc->timer, jiffies + GC_REFRESH_TIME);
+	if(running)
+		mod_timer(&gc->timer, jiffies + GC_REFRESH_TIME);
 }
 
 static int __init gc_setup_pad(struct gc *gc)
@@ -518,6 +521,8 @@ static int __init gc_init(void)
 
 	printk(KERN_INFO "Device Driver Insert...Done!!!\n");
 
+	running = 1;
+	
 	mod_timer(&gc_base->timer, jiffies + GC_REFRESH_TIME);
 
 	return 0;
@@ -545,8 +550,11 @@ r_sysfs:
 
 static void __exit gc_exit(void)
 {
+	running = 0;
+
 	if (gc_base){
-		del_timer_sync(&gc_base->timer);
+		//del_timer_sync(&gc_base->timer);
+		del_timer(&gc_base->timer);
 		gc_remove(gc_base);
 	}
 
